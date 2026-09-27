@@ -58,5 +58,3 @@ The generator reads standard Excel workbooks containing two worksheets:
 
 ---
 
-## 🛠️ Rebuilding the Offline File
-If you ever edit `protocol_qr_generator.html` and want to repackage all dependencies into a new single offline file, run:
