@@ -168,17 +168,6 @@ var QRCode;!function(){function a(a){this.mode=c.MODE_8BIT_BYTE,this.data=a,this
       border: 1px solid rgba(239, 83, 80, 0.3);
     }
 
-    .health-help-btn {
-      background: transparent;
-      border: 1px solid var(--accent);
-      color: var(--accent);
-      padding: 4px 10px;
-      border-radius: 4px;
-      font-size: 12px;
-      font-weight: 600;
-      cursor: pointer;
-    }
-
     .grid {
       display: grid;
       grid-template-columns: 1fr 1fr;
@@ -572,12 +561,12 @@ var QRCode;!function(){function a(a){this.mode=c.MODE_8BIT_BYTE,this.data=a,this
           <div class="dropzone" id="dropzone" onclick="document.getElementById('file-input').click()">
             <div class="dropzone-icon">📄</div>
             <p><strong>Click to choose</strong> or drag & drop an Excel file (.xlsx)</p>
-            <p style="font-size: 12px; color: var(--text-muted); margin-top: 4px;">Supports Variables + Steps worksheets</p>
+            <p style="font-size: 12px; color: var(--text-muted); margin-top: 4px;">Supports Variables + Steps + Table worksheets</p>
             <input type="file" id="file-input" accept=".xlsx, .xls" style="display: none;" onchange="handleFileSelect(event)" />
           </div>
 
           <div class="btn-row">
-            <button class="btn btn-secondary" onclick="loadSampleProtocol('dilution')">Load Sample: Dilution Protocol</button>
+            <button class="btn btn-secondary" onclick="loadSampleProtocol('dilution')">Load Sample: Dilution Protocol + Table</button>
             <button class="btn btn-secondary" onclick="loadSampleProtocol('large')">Load Sample: 20-Step Assay</button>
           </div>
         </div>
@@ -851,6 +840,205 @@ var QRCode;!function(){function a(a){this.mode=c.MODE_8BIT_BYTE,this.data=a,this
       }
     }
 
+    function buildCompactProtocol(proto) {
+      return {
+        t: proto.title,
+        v: (proto.variables || []).map(v => [
+          v.key,
+          v.label,
+          v.type === 'number' ? 1 : 0,
+          v.defaultValue,
+          v.unit || ''
+        ]),
+        s: (proto.steps || []).map(s => ({
+          n: s.stepNumber,
+          t: s.title,
+          i: s.instruction,
+          tm: s.timer || '',
+          e: (s.elements || []).map(e => {
+            if (e.kind === 'record') {
+              return ['r', e.key, e.label, e.type === 'number' ? 1 : 0, e.defaultValue || ''];
+            }
+            if (e.kind === 'calc') {
+              return ['c', e.label, e.formula, e.unit || '', e.outputVariable || '', e.hasCheckbox ? 1 : 0];
+            }
+            if (e.kind === 'table') {
+              return ['tb', e.label, e.source || '', e.headers || [], e.rows || [], e.scaleVar || '', e.hasCheckbox ? 1 : 0];
+            }
+            return [];
+          })
+        }))
+      };
+    }
+
+    function extractTableFromWorkbook(workbook, rawSource) {
+      let targetSheetName = '';
+      let targetRange = undefined;
+      const trimmed = String(rawSource || '').trim().replace(/^=/, '');
+
+      const names = workbook.Workbook?.Names || [];
+      const foundNamedRange = names.find(n => n.Name && n.Name.toLowerCase() === trimmed.toLowerCase());
+      let refToParse = (foundNamedRange && foundNamedRange.Ref) ? foundNamedRange.Ref : trimmed;
+
+      if (refToParse.includes('!')) {
+        const parts = refToParse.split('!');
+        targetSheetName = parts[0].replace(/^['"]|['"]$/g, '');
+        targetRange = parts[1].replace(/\$/g, '');
+      } else {
+        const matchingSheet = workbook.SheetNames.find(s => s.toLowerCase() === refToParse.toLowerCase());
+        if (matchingSheet) {
+          targetSheetName = matchingSheet;
+        } else {
+          const fallbackSheet = workbook.SheetNames.find(s => !['variables', 'steps'].includes(s.toLowerCase())) || workbook.SheetNames[0];
+          targetSheetName = fallbackSheet;
+          targetRange = refToParse.replace(/\$/g, '');
+        }
+      }
+
+      const actualSheetKey = Object.keys(workbook.Sheets).find(k => k.toLowerCase() === targetSheetName.toLowerCase());
+      const sheet = actualSheetKey ? workbook.Sheets[actualSheetKey] : undefined;
+      if (!sheet) return { headers: ['Error'], rows: [[`Sheet "${targetSheetName}" not found`]] };
+
+      const rangeToUse = targetRange || sheet['!ref'];
+      if (!rangeToUse) return { headers: [], rows: [] };
+
+      try {
+        const rawGrid = XLSX.utils.sheet_to_json(sheet, { header: 1, range: rangeToUse, raw: false, defval: '' });
+        if (!rawGrid || rawGrid.length === 0) return { headers: [], rows: [] };
+
+        let headerRowIdx = 0;
+        while (headerRowIdx < rawGrid.length && (!rawGrid[headerRowIdx] || rawGrid[headerRowIdx].every(c => String(c).trim() === ''))) {
+          headerRowIdx++;
+        }
+        if (headerRowIdx >= rawGrid.length) return { headers: [], rows: [] };
+
+        const headers = (rawGrid[headerRowIdx] || []).map(h => String(h ?? '').trim());
+        let maxCols = headers.length;
+        for (let r = headerRowIdx + 1; r < rawGrid.length; r++) {
+          if (rawGrid[r] && rawGrid[r].length > maxCols) maxCols = rawGrid[r].length;
+        }
+        while (headers.length < maxCols) headers.push('');
+
+        const rows = [];
+        for (let r = headerRowIdx + 1; r < rawGrid.length; r++) {
+          const row = rawGrid[r] || [];
+          if (row.every(c => String(c).trim() === '')) continue;
+          const rowCells = [];
+          for (let c = 0; c < maxCols; c++) rowCells.push(String(row[c] ?? '').trim());
+          rows.push(rowCells);
+        }
+        return { headers, rows };
+      } catch (err) {
+        return { headers: ['Error'], rows: [[err.message || 'Could not parse table']] };
+      }
+    }
+
+    function parseWorkbook(workbook, defaultTitle) {
+      const variables = [];
+      const varSheetKey = workbook.SheetNames.find(s => s.toLowerCase() === 'variables');
+      if (varSheetKey) {
+        const rawVars = XLSX.utils.sheet_to_json(workbook.Sheets[varSheetKey]);
+        rawVars.forEach(row => {
+          const key = String(row.VariableKey || row.variablekey || row.Variable || row.variable || '').trim();
+          if (key) {
+            variables.push({
+              key,
+              label: String(row.Label || row.label || key).trim(),
+              type: String(row.Type || row.type || 'text').toLowerCase() === 'number' ? 'number' : 'text',
+              defaultValue: String(row.Default ?? row.default ?? ''),
+              unit: row.Unit || row.unit ? String(row.Unit || row.unit).trim() : undefined,
+            });
+          }
+        });
+      }
+
+      const steps = [];
+      const stepsSheetKey = workbook.SheetNames.find(s => s.toLowerCase() === 'steps');
+      if (!stepsSheetKey) throw new Error("Missing required 'Steps' worksheet");
+
+      const rawSteps = XLSX.utils.sheet_to_json(workbook.Sheets[stepsSheetKey], { defval: '' });
+      let currentStep = null;
+
+      rawSteps.forEach(rawRow => {
+        const row = {};
+        Object.entries(rawRow).forEach(([k, v]) => {
+          row[k.trim().toLowerCase().replace(/[\s-]+/g, '_')] = v;
+        });
+
+        const rawTitle = String(row['title'] || '').trim();
+        const rawInstruction = String(row['instruction'] || '').trim();
+        const rawTimer = String(row['timer'] || '').trim();
+        const rawStepVal = row['step'];
+        const parsedStepVal = rawStepVal !== undefined && String(rawStepVal).trim() !== '' ? parseInt(String(rawStepVal), 10) : undefined;
+
+        const isNewStep = !currentStep || (parsedStepVal !== undefined && parsedStepVal !== currentStep.stepNumber) || (parsedStepVal === undefined && rawTitle !== '');
+
+        if (isNewStep) {
+          const stepNumber = parsedStepVal !== undefined ? parsedStepVal : steps.length + 1;
+          currentStep = {
+            stepNumber,
+            title: rawTitle || `Step ${stepNumber}`,
+            instruction: rawInstruction || '',
+            timer: rawTimer || undefined,
+            elements: [],
+          };
+          steps.push(currentStep);
+        } else {
+          if (!currentStep.title && rawTitle) currentStep.title = rawTitle;
+          if (!currentStep.instruction && rawInstruction) currentStep.instruction = rawInstruction;
+          if (!currentStep.timer && rawTimer) currentStep.timer = rawTimer;
+        }
+
+        const rawType = String(row['type'] || '').trim().toLowerCase();
+        const rawLabel = String(row['label'] || row['input_description'] || row['calculation_label'] || '').trim();
+        const rawVar = String(row['variable'] || row['input_variable'] || row['output_variable'] || '').trim();
+        const rawValExpr = String(row['value_or_expression'] ?? row['value'] ?? row['expression'] ?? row['calculation_formula'] ?? '').trim();
+        const rawUnit = String(row['unit'] || row['output_units'] || '').trim();
+        const rawOptions = String(row['options'] || '').trim();
+        const rawOptionsLower = rawOptions.toLowerCase();
+        const hasCheckbox = rawOptionsLower.includes('chk') || rawOptionsLower.includes('check');
+        const scaleMatch = rawOptions.match(/scale:([a-zA-Z0-9_.]+)/i);
+        const scaleVar = scaleMatch ? scaleMatch[1].trim() : undefined;
+
+        if (rawType === 'table') {
+          const { headers, rows } = extractTableFromWorkbook(workbook, rawValExpr || rawLabel);
+          currentStep.elements.push({
+            kind: 'table',
+            label: rawLabel || 'Reference Table',
+            source: rawValExpr,
+            headers,
+            rows,
+            scaleVar,
+            hasCheckbox,
+          });
+        } else if (rawType === 'number' || rawType === 'text') {
+          currentStep.elements.push({
+            kind: 'record',
+            key: rawVar,
+            label: rawLabel,
+            type: rawType,
+            defaultValue: rawValExpr || undefined,
+          });
+        } else if (rawType === 'calc' || rawValExpr) {
+          currentStep.elements.push({
+            kind: 'calc',
+            type: 'eval',
+            formula: rawValExpr,
+            label: rawLabel,
+            outputVariable: rawVar || undefined,
+            unit: rawUnit || undefined,
+            hasCheckbox,
+          });
+        }
+      });
+
+      return {
+        title: defaultTitle || 'Standard Laboratory Protocol',
+        variables,
+        steps,
+      };
+    }
+
     function generateProtocolQR() {
       updateHealthBadges();
       if (!currentProtocol) return;
@@ -863,7 +1051,11 @@ var QRCode;!function(){function a(a){this.mode=c.MODE_8BIT_BYTE,this.data=a,this
         <div class="preview-item"><strong>Title:</strong> ${currentProtocol.title}</div>
         <div class="preview-item"><strong>Variables (${currentProtocol.variables.length}):</strong> ${currentProtocol.variables.map(v => v.key).join(', ') || 'None'}</div>
         <div class="preview-item"><strong>Steps (${currentProtocol.steps.length}):</strong></div>
-        ${currentProtocol.steps.map(s => `<div style="padding-left:10px;">• ${s.stepNumber}. ${s.title}</div>`).join('')}
+        ${currentProtocol.steps.map(s => {
+          const tableElem = s.elements.find(e => e.kind === 'table');
+          const tableInfo = tableElem ? ` <span style="color:#00e5ff">[Table: ${tableElem.headers.length} cols, ${tableElem.rows.length} rows]</span>` : '';
+          return `<div style="padding-left:10px;">• ${s.stepNumber}. ${s.title}${tableInfo}</div>`;
+        }).join('')}
       `;
 
       let fullPayload = '';
@@ -1025,25 +1217,6 @@ var QRCode;!function(){function a(a){this.mode=c.MODE_8BIT_BYTE,this.data=a,this
       link.click();
     }
 
-    function buildCompactProtocol(proto) {
-      return {
-        t: proto.title,
-        v: proto.variables.map(v => [v.key, v.label, v.type === 'number' ? 1 : 0, v.defaultValue, v.unit || '']),
-        s: proto.steps.map(s => ({
-          n: s.stepNumber,
-          t: s.title,
-          i: s.instruction,
-          tm: s.timer || '',
-          e: s.elements.map(e => {
-            if (e.kind === 'record') return ['r', e.key, e.label, e.type === 'number' ? 1 : 0];
-            if (e.kind === 'calc') return ['c', e.label, e.formula, e.unit || '', e.outputVariable || '', e.hasCheckbox ? 1 : 0];
-            if (e.kind === 'table') return ['tb', e.label, e.source];
-            return [];
-          })
-        }))
-      };
-    }
-
     function parseUploadedExcel(file) {
       if (typeof XLSX === 'undefined') {
         alert('XLSX library not loaded yet.');
@@ -1064,100 +1237,14 @@ var QRCode;!function(){function a(a){this.mode=c.MODE_8BIT_BYTE,this.data=a,this
       reader.readAsArrayBuffer(file);
     }
 
-    function parseWorkbook(workbook, defaultTitle) {
-      const variables = [];
-      const varSheetKey = workbook.SheetNames.find(s => s.toLowerCase() === 'variables');
-      if (varSheetKey) {
-        const rawVars = XLSX.utils.sheet_to_json(workbook.Sheets[varSheetKey]);
-        rawVars.forEach(row => {
-          const key = String(row.VariableKey || row.variablekey || row.Variable || row.variable || '').trim();
-          if (key) {
-            variables.push({
-              key,
-              label: String(row.Label || row.label || key).trim(),
-              type: String(row.Type || row.type || 'text').toLowerCase() === 'number' ? 'number' : 'text',
-              defaultValue: String(row.Default ?? row.default ?? ''),
-              unit: row.Unit || row.unit ? String(row.Unit || row.unit).trim() : undefined,
-            });
-          }
-        });
-      }
-
-      const steps = [];
-      const stepsSheetKey = workbook.SheetNames.find(s => s.toLowerCase() === 'steps');
-      if (!stepsSheetKey) throw new Error("Missing required 'Steps' worksheet");
-
-      const rawSteps = XLSX.utils.sheet_to_json(workbook.Sheets[stepsSheetKey], { defval: '' });
-      let currentStep = null;
-
-      rawSteps.forEach(rawRow => {
-        const row = {};
-        Object.entries(rawRow).forEach(([k, v]) => {
-          row[k.trim().toLowerCase().replace(/[\s-]+/g, '_')] = v;
-        });
-
-        const rawTitle = String(row['title'] || '').trim();
-        const rawInstruction = String(row['instruction'] || '').trim();
-        const rawTimer = String(row['timer'] || '').trim();
-        const rawStepVal = row['step'];
-        const parsedStepVal = rawStepVal !== undefined && String(rawStepVal).trim() !== '' ? parseInt(String(rawStepVal), 10) : undefined;
-
-        const isNewStep = !currentStep || (parsedStepVal !== undefined && parsedStepVal !== currentStep.stepNumber) || (parsedStepVal === undefined && rawTitle !== '');
-
-        if (isNewStep) {
-          const stepNumber = parsedStepVal !== undefined ? parsedStepVal : steps.length + 1;
-          currentStep = {
-            stepNumber,
-            title: rawTitle || `Step ${stepNumber}`,
-            instruction: rawInstruction || '',
-            timer: rawTimer || undefined,
-            elements: [],
-          };
-          steps.push(currentStep);
-        } else {
-          if (!currentStep.title && rawTitle) currentStep.title = rawTitle;
-          if (!currentStep.instruction && rawInstruction) currentStep.instruction = rawInstruction;
-        }
-
-        const rawType = String(row['type'] || '').trim().toLowerCase();
-        const rawLabel = String(row['label'] || '').trim();
-        const rawVar = String(row['variable'] || '').trim();
-        const rawValExpr = String(row['value_or_expression'] ?? row['value'] ?? '').trim();
-        const rawUnit = String(row['unit'] || '').trim();
-        const rawOptions = String(row['options'] || '').trim().toLowerCase();
-        const hasCheckbox = rawOptions.includes('chk') || rawOptions.includes('check');
-
-        if (rawType === 'table') {
-          currentStep.elements.push({ kind: 'table', label: rawLabel, source: rawValExpr });
-        } else if (rawType === 'number' || rawType === 'text') {
-          currentStep.elements.push({ kind: 'record', key: rawVar, label: rawLabel, type: rawType });
-        } else if (rawType === 'calc' || rawValExpr) {
-          currentStep.elements.push({
-            kind: 'calc',
-            type: 'eval',
-            formula: rawValExpr,
-            label: rawLabel,
-            outputVariable: rawVar || undefined,
-            unit: rawUnit || undefined,
-            hasCheckbox,
-          });
-        }
-      });
-
-      return {
-        title: defaultTitle || 'Standard Laboratory Protocol',
-        variables,
-        steps,
-      };
-    }
-
     function loadSampleProtocol(type) {
       if (type === 'dilution') {
         currentProtocol = {
           title: "BSA Dilution & Bradford Assay",
           variables: [
             { key: "C_stock", label: "Stock BSA Conc", type: "number", defaultValue: "2000", unit: "ug/mL" },
-            { key: "V_final", label: "Final Target Vol", type: "number", defaultValue: "100", unit: "uL" }
+            { key: "V_final", label: "Final Target Vol", type: "number", defaultValue: "100", unit: "uL" },
+            { key: "media_volume", label: "Media Volume Factor", type: "number", defaultValue: "2" }
           ],
           steps: [
             {
@@ -1170,6 +1257,26 @@ var QRCode;!function(){function a(a){this.mode=c.MODE_8BIT_BYTE,this.data=a,this
             },
             {
               stepNumber: 2,
+              title: "Reagent Addition Table",
+              instruction: "Reference tables stay frozen on the left column while you scroll. Tap any row to cross it off as you add reagents. Scaled columns [*] multiply automatically.",
+              elements: [
+                {
+                  kind: "table",
+                  label: "Recipe Table",
+                  source: "Recipe!A1:C4",
+                  headers: ["Component", "Base Volume", "Volume [*]"],
+                  rows: [
+                    ["Basal Media", "900 uL", "900"],
+                    ["Supplement B27", "20 uL", "20"],
+                    ["Pen/Strep", "10 uL", "10"]
+                  ],
+                  scaleVar: "media_volume",
+                  hasCheckbox: true
+                }
+              ]
+            },
+            {
+              stepNumber: 3,
               title: "Bradford Reagent Addition",
               instruction: "Add 1mL of Bradford Dye Reagent to each tube and mix by vortexing.",
               timer: "10m",
@@ -1223,7 +1330,7 @@ var QRCode;!function(){function a(a){this.mode=c.MODE_8BIT_BYTE,this.data=a,this
 
     window.addEventListener('load', () => {
       updateHealthBadges();
-      loadSampleProtocol('large');
+      loadSampleProtocol('dilution');
     });
   </script>
 </body>
