@@ -561,12 +561,12 @@ var QRCode;!function(){function a(a){this.mode=c.MODE_8BIT_BYTE,this.data=a,this
           <div class="dropzone" id="dropzone" onclick="document.getElementById('file-input').click()">
             <div class="dropzone-icon">📄</div>
             <p><strong>Click to choose</strong> or drag & drop an Excel file (.xlsx)</p>
-            <p style="font-size: 12px; color: var(--text-muted); margin-top: 4px;">Supports Variables + Steps + Table worksheets</p>
+            <p style="font-size: 12px; color: var(--text-muted); margin-top: 4px;">Supports Variables + Steps + Platemap/Table worksheets</p>
             <input type="file" id="file-input" accept=".xlsx, .xls" style="display: none;" onchange="handleFileSelect(event)" />
           </div>
 
           <div class="btn-row">
-            <button class="btn btn-secondary" onclick="loadSampleProtocol('dilution')">Load Sample: Dilution Protocol + Table</button>
+            <button class="btn btn-secondary" onclick="loadSampleProtocol('dilution')">Load Sample: Dilution Protocol + Platemap</button>
             <button class="btn btn-secondary" onclick="loadSampleProtocol('large')">Load Sample: 20-Step Assay</button>
           </div>
         </div>
@@ -865,6 +865,9 @@ var QRCode;!function(){function a(a){this.mode=c.MODE_8BIT_BYTE,this.data=a,this
             if (e.kind === 'table') {
               return ['tb', e.label, e.source || '', e.headers || [], e.rows || [], e.scaleVar || '', e.hasCheckbox ? 1 : 0];
             }
+            if (e.kind === 'platemap') {
+              return ['pm', e.label, e.source || '', e.headers || [], e.rows || []];
+            }
             return [];
           })
         }))
@@ -990,6 +993,7 @@ var QRCode;!function(){function a(a){this.mode=c.MODE_8BIT_BYTE,this.data=a,this
         }
 
         const rawType = String(row['type'] || '').trim().toLowerCase();
+        const cleanType = rawType.replace(/[\s_-]+/g, '');
         const rawLabel = String(row['label'] || row['input_description'] || row['calculation_label'] || '').trim();
         const rawVar = String(row['variable'] || row['input_variable'] || row['output_variable'] || '').trim();
         const rawValExpr = String(row['value_or_expression'] ?? row['value'] ?? row['expression'] ?? row['calculation_formula'] ?? '').trim();
@@ -1000,7 +1004,16 @@ var QRCode;!function(){function a(a){this.mode=c.MODE_8BIT_BYTE,this.data=a,this
         const scaleMatch = rawOptions.match(/scale:([a-zA-Z0-9_.]+)/i);
         const scaleVar = scaleMatch ? scaleMatch[1].trim() : undefined;
 
-        if (rawType === 'table') {
+        if (cleanType === 'platemap' || cleanType === 'plate') {
+          const { headers, rows } = extractTableFromWorkbook(workbook, rawValExpr || rawLabel);
+          currentStep.elements.push({
+            kind: 'platemap',
+            label: rawLabel || 'Plate Map',
+            source: rawValExpr,
+            headers,
+            rows,
+          });
+        } else if (cleanType === 'table') {
           const { headers, rows } = extractTableFromWorkbook(workbook, rawValExpr || rawLabel);
           currentStep.elements.push({
             kind: 'table',
@@ -1011,15 +1024,15 @@ var QRCode;!function(){function a(a){this.mode=c.MODE_8BIT_BYTE,this.data=a,this
             scaleVar,
             hasCheckbox,
           });
-        } else if (rawType === 'number' || rawType === 'text') {
+        } else if (cleanType === 'number' || cleanType === 'text') {
           currentStep.elements.push({
             kind: 'record',
             key: rawVar,
             label: rawLabel,
-            type: rawType,
+            type: cleanType,
             defaultValue: rawValExpr || undefined,
           });
-        } else if (rawType === 'calc' || rawValExpr) {
+        } else if (cleanType === 'calc' || rawValExpr) {
           currentStep.elements.push({
             kind: 'calc',
             type: 'eval',
@@ -1053,8 +1066,10 @@ var QRCode;!function(){function a(a){this.mode=c.MODE_8BIT_BYTE,this.data=a,this
         <div class="preview-item"><strong>Steps (${currentProtocol.steps.length}):</strong></div>
         ${currentProtocol.steps.map(s => {
           const tableElem = s.elements.find(e => e.kind === 'table');
+          const plateElem = s.elements.find(e => e.kind === 'platemap');
           const tableInfo = tableElem ? ` <span style="color:#00e5ff">[Table: ${tableElem.headers.length} cols, ${tableElem.rows.length} rows]</span>` : '';
-          return `<div style="padding-left:10px;">• ${s.stepNumber}. ${s.title}${tableInfo}</div>`;
+          const plateInfo = plateElem ? ` <span style="color:#ffb74d">[Platemap: ${plateElem.headers.length} cols, ${plateElem.rows.length} rows]</span>` : '';
+          return `<div style="padding-left:10px;">• ${s.stepNumber}. ${s.title}${tableInfo}${plateInfo}</div>`;
         }).join('')}
       `;
 
@@ -1240,7 +1255,7 @@ var QRCode;!function(){function a(a){this.mode=c.MODE_8BIT_BYTE,this.data=a,this
     function loadSampleProtocol(type) {
       if (type === 'dilution') {
         currentProtocol = {
-          title: "BSA Dilution & Bradford Assay",
+          title: "BSA Dilution, Bradford Assay & Platemap",
           variables: [
             { key: "C_stock", label: "Stock BSA Conc", type: "number", defaultValue: "2000", unit: "ug/mL" },
             { key: "V_final", label: "Final Target Vol", type: "number", defaultValue: "100", unit: "uL" },
@@ -1277,6 +1292,25 @@ var QRCode;!function(){function a(a){this.mode=c.MODE_8BIT_BYTE,this.data=a,this
             },
             {
               stepNumber: 3,
+              title: "96-Well Platemap Layout",
+              instruction: "Inspect the 96-well culture platemap layout directly at the bench. Tap the grid for interactive fullscreen landscape view.",
+              elements: [
+                {
+                  kind: "platemap",
+                  label: "96-Well Culture Map",
+                  source: "PlateMap!A1:M5",
+                  headers: ["", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12"],
+                  rows: [
+                    ["A", "Blank", "Std 1", "Std 2", "Sample 1", "Sample 1", "Sample 2", "Sample 2", "Ctrl", "Ctrl", "Empty", "Empty", "Empty"],
+                    ["B", "Blank", "Std 1", "Std 2", "Sample 1", "Sample 1", "Sample 2", "Sample 2", "Ctrl", "Ctrl", "Empty", "Empty", "Empty"],
+                    ["C", "Blank", "Std 3", "Std 4", "Sample 3", "Sample 3", "Sample 4", "Sample 4", "Ctrl", "Ctrl", "Empty", "Empty", "Empty"],
+                    ["D", "Blank", "Std 3", "Std 4", "Sample 3", "Sample 3", "Sample 4", "Sample 4", "Ctrl", "Ctrl", "Empty", "Empty", "Empty"]
+                  ]
+                }
+              ]
+            },
+            {
+              stepNumber: 4,
               title: "Bradford Reagent Addition",
               instruction: "Add 1mL of Bradford Dye Reagent to each tube and mix by vortexing.",
               timer: "10m",
