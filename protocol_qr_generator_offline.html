@@ -506,25 +506,99 @@ var QRCode;!function(){function a(a){this.mode=c.MODE_8BIT_BYTE,this.data=a,this
       color: var(--accent);
     }
 
+    /* Print-Only Title */
+    .print-protocol-title {
+      display: none;
+    }
+
+    /* Print Viewport Rules: Print ONLY Protocol Title & QR Codes */
     @media print {
       body {
-        background: #fff;
-        color: #000;
-        padding: 0;
+        background: #fff !important;
+        color: #000 !important;
+        padding: 0 !important;
+        margin: 0 !important;
       }
-      .card {
-        border: 1px solid #ccc;
-        background: #fff;
-        color: #000;
+
+      .container {
+        max-width: 100% !important;
+        margin: 0 !important;
+        padding: 15mm 20mm !important;
       }
-      .btn, .dropzone, textarea, select, .health-bar, .tab-row, .carousel-controls, .speed-slider-row {
+
+      .grid {
+        display: block !important;
+      }
+
+      /* Hide all header, diagnostics, left controls, buttons, carousels, payloads */
+      header,
+      .health-bar,
+      .grid > div:first-child,
+      #diagnostics-card,
+      #card-qr-codes > h2,
+      .tab-row,
+      #view-carousel,
+      .field-group,
+      .btn-row,
+      .btn,
+      .dropzone,
+      .multi-qr-sub {
         display: none !important;
       }
-      #view-carousel {
-        display: none !important;
+
+      #card-qr-codes {
+        border: none !important;
+        background: transparent !important;
+        padding: 0 !important;
+        margin: 0 !important;
+        box-shadow: none !important;
       }
+
+      /* Prominent Protocol Title at Top of Print */
+      .print-protocol-title {
+        display: block !important;
+        font-size: 22pt !important;
+        font-weight: 800 !important;
+        color: #000 !important;
+        text-align: center !important;
+        margin-bottom: 24pt !important;
+        padding-bottom: 10pt !important;
+        border-bottom: 2pt solid #000 !important;
+      }
+
+      /* Force Side-by-Side Multi-QR Grid */
       #view-grid {
         display: block !important;
+      }
+
+      .multi-qr-grid {
+        display: flex !important;
+        flex-wrap: wrap !important;
+        justify-content: center !important;
+        gap: 20pt !important;
+      }
+
+      .multi-qr-card {
+        background: #fff !important;
+        border: 1pt solid #bbb !important;
+        border-radius: 8pt !important;
+        box-shadow: none !important;
+        page-break-inside: avoid !important;
+        padding: 14pt !important;
+      }
+
+      .multi-qr-card img {
+        width: 220px !important;
+        height: 220px !important;
+        margin: 8pt 0 !important;
+        background: #fff !important;
+        padding: 0 !important;
+      }
+
+      .multi-qr-label {
+        color: #000 !important;
+        font-size: 13pt !important;
+        font-weight: 800 !important;
       }
     }
   </style>
@@ -616,47 +690,13 @@ var QRCode;!function(){function a(a){this.mode=c.MODE_8BIT_BYTE,this.data=a,this
         </div>
       </div>
 
-      <!-- RIGHT COLUMN: QR OUTPUT & DUAL DELIVERY MODES -->
+      <!-- RIGHT COLUMN: GENERATED QR CODES (TOP) & DIAGNOSTICS (BOTTOM) -->
       <div>
-        <div class="card">
-          <h2>📊 Payload & Chunk Diagnostics</h2>
+        <!-- 1. GENERATED QR CODES (TOP RIGHT NEXT TO LOAD PROTOCOL) -->
+        <div class="card" id="card-qr-codes">
+          <!-- Print-Only Title Header -->
+          <h1 id="print-protocol-title" class="print-protocol-title">Protocol Title</h1>
 
-          <div class="capacity-wrapper">
-            <div style="display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 6px;">
-              <span>Protocol Chunking Plan:</span>
-              <strong id="chunk-plan-text">1 Chunk</strong>
-            </div>
-            <div class="capacity-bar-bg">
-              <div class="capacity-bar-fill" id="capacity-fill"></div>
-            </div>
-          </div>
-
-          <div class="stat-row">
-            <span class="stat-label">Total Protocol Payload:</span>
-            <span class="stat-value" id="stat-total-size">0 bytes</span>
-          </div>
-          <div class="stat-row">
-            <span class="stat-label">Active Chunk Limit:</span>
-            <span class="stat-value" id="stat-chunk-limit">600 bytes</span>
-          </div>
-          <div class="stat-row">
-            <span class="stat-label">Resulting QR Code Count:</span>
-            <span class="stat-value" id="stat-qr-count" style="color: var(--accent); font-size: 15px;">1 Code</span>
-          </div>
-          <div class="stat-row">
-            <span class="stat-label">Average Size per Chunk:</span>
-            <span class="stat-value" id="stat-avg-size">0 bytes</span>
-          </div>
-
-          <div class="alert alert-success" id="alert-single" style="display: block;">
-            ✅ Fits in a single high-contrast QR code. Instant 1-tap scan at the bench.
-          </div>
-          <div class="alert alert-warning" id="alert-multi" style="display: none;">
-            ⚡ Large protocol automatically split into smaller high-readability chunks. Point phone at the rotating code or scan the printed sequence.
-          </div>
-        </div>
-
-        <div class="card">
           <h2>🔲 Generated QR Code(s)</h2>
 
           <!-- Tab Bar -->
@@ -701,6 +741,45 @@ var QRCode;!function(){function a(a){this.mode=c.MODE_8BIT_BYTE,this.data=a,this
           <div class="btn-row">
             <button class="btn" onclick="downloadActiveQR()">💾 Download Active Frame</button>
             <button class="btn btn-secondary" onclick="window.print()">🖨️ Print Compliance SOP Sheet</button>
+          </div>
+        </div>
+
+        <!-- 2. PAYLOAD & CHUNK DIAGNOSTICS (BELOW GENERATED QR CODES) -->
+        <div class="card" id="diagnostics-card">
+          <h2>📊 Payload & Chunk Diagnostics</h2>
+
+          <div class="capacity-wrapper">
+            <div style="display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 6px;">
+              <span>Protocol Chunking Plan:</span>
+              <strong id="chunk-plan-text">1 Chunk</strong>
+            </div>
+            <div class="capacity-bar-bg">
+              <div class="capacity-bar-fill" id="capacity-fill"></div>
+            </div>
+          </div>
+
+          <div class="stat-row">
+            <span class="stat-label">Total Protocol Payload:</span>
+            <span class="stat-value" id="stat-total-size">0 bytes</span>
+          </div>
+          <div class="stat-row">
+            <span class="stat-label">Active Chunk Limit:</span>
+            <span class="stat-value" id="stat-chunk-limit">600 bytes</span>
+          </div>
+          <div class="stat-row">
+            <span class="stat-label">Resulting QR Code Count:</span>
+            <span class="stat-value" id="stat-qr-count" style="color: var(--accent); font-size: 15px;">1 Code</span>
+          </div>
+          <div class="stat-row">
+            <span class="stat-label">Average Size per Chunk:</span>
+            <span class="stat-value" id="stat-avg-size">0 bytes</span>
+          </div>
+
+          <div class="alert alert-success" id="alert-single" style="display: block;">
+            ✅ Fits in a single high-contrast QR code. Instant 1-tap scan at the bench.
+          </div>
+          <div class="alert alert-warning" id="alert-multi" style="display: none;">
+            ⚡ Large protocol automatically split into smaller high-readability chunks. Point phone at the rotating code or scan the printed sequence.
           </div>
         </div>
       </div>
@@ -1060,6 +1139,12 @@ var QRCode;!function(){function a(a){this.mode=c.MODE_8BIT_BYTE,this.data=a,this
       const ecc = document.getElementById('ecc-level').value;
       const maxChunkBytes = getSelectedChunkSize();
 
+      // Update Print Title
+      const printTitle = document.getElementById('print-protocol-title');
+      if (printTitle) {
+        printTitle.textContent = currentProtocol.title;
+      }
+
       document.getElementById('protocol-preview').innerHTML = `
         <div class="preview-item"><strong>Title:</strong> ${currentProtocol.title}</div>
         <div class="preview-item"><strong>Variables (${currentProtocol.variables.length}):</strong> ${currentProtocol.variables.map(v => v.key).join(', ') || 'None'}</div>
@@ -1153,7 +1238,7 @@ var QRCode;!function(){function a(a){this.mode=c.MODE_8BIT_BYTE,this.data=a,this
             const card = document.createElement('div');
             card.className = 'multi-qr-card';
             card.innerHTML = `
-              <div class="multi-qr-label">Part ${chk.index} of ${chk.total}</div>
+              <div class="multi-qr-label">${chk.total > 1 ? `Part ${chk.index} of ${chk.total}` : ''}</div>
               <img src="${url}" alt="Part ${chk.index}" />
               <div class="multi-qr-sub">${chk.payload.length} bytes</div>
             `;
