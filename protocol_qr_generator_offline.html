@@ -201,7 +201,7 @@ var QRCode;!function(){function a(a){this.mode=c.MODE_8BIT_BYTE,this.data=a,this
     .dropzone {
       border: 2px dashed var(--border);
       border-radius: 8px;
-      padding: 24px 16px;
+      padding: 20px 16px;
       text-align: center;
       cursor: pointer;
       transition: all 0.2s ease;
@@ -214,8 +214,8 @@ var QRCode;!function(){function a(a){this.mode=c.MODE_8BIT_BYTE,this.data=a,this
     }
 
     .dropzone-icon {
-      font-size: 32px;
-      margin-bottom: 8px;
+      font-size: 30px;
+      margin-bottom: 6px;
     }
 
     .btn {
@@ -223,8 +223,8 @@ var QRCode;!function(){function a(a){this.mode=c.MODE_8BIT_BYTE,this.data=a,this
       color: #fff;
       border: none;
       border-radius: 6px;
-      padding: 10px 18px;
-      font-size: 14px;
+      padding: 10px 16px;
+      font-size: 13px;
       font-weight: 700;
       cursor: pointer;
       display: inline-flex;
@@ -244,6 +244,11 @@ var QRCode;!function(){function a(a){this.mode=c.MODE_8BIT_BYTE,this.data=a,this
 
     .btn-secondary:hover {
       background: #374c54;
+    }
+
+    .btn-sm {
+      padding: 6px 12px;
+      font-size: 12px;
     }
 
     .btn-row {
@@ -286,6 +291,28 @@ var QRCode;!function(){function a(a){this.mode=c.MODE_8BIT_BYTE,this.data=a,this
       font-size: 12px;
       resize: vertical;
       height: 90px;
+    }
+
+    .folder-status-box {
+      background: #111a1d;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 10px 14px;
+      margin-bottom: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .folder-name-text {
+      font-size: 13px;
+      font-weight: 600;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      gap: 6px;
     }
 
     .stat-row {
@@ -447,7 +474,7 @@ var QRCode;!function(){function a(a){this.mode=c.MODE_8BIT_BYTE,this.data=a,this
       color: var(--text-muted);
     }
 
-    /* Print / Side-by-Side Multi-Code Grid */
+    /* Multi-QR Grid */
     .multi-qr-grid {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
@@ -506,104 +533,72 @@ var QRCode;!function(){function a(a){this.mode=c.MODE_8BIT_BYTE,this.data=a,this
       color: var(--accent);
     }
 
-    /* Print-Only Title */
-    .print-protocol-title {
+    /* Print View Container (Hidden on Screen) */
+    #print-document {
       display: none;
     }
 
-    /* Print Viewport Rules: Print ONLY Protocol Title & QR Codes */
+    /* Print Rules: ONLY print Protocol Title and QR Codes */
     @media print {
-      body {
+      body * {
+        visibility: hidden !important;
+      }
+      #print-document, #print-document * {
+        visibility: visible !important;
+      }
+      #print-document {
+        display: block !important;
+        position: absolute !important;
+        left: 0 !important;
+        top: 0 !important;
+        width: 100% !important;
         background: #fff !important;
         color: #000 !important;
-        padding: 0 !important;
-        margin: 0 !important;
+        padding: 24px !important;
       }
-
-      .container {
-        max-width: 100% !important;
-        margin: 0 !important;
-        padding: 15mm 20mm !important;
-      }
-
-      .grid {
-        display: block !important;
-      }
-
-      /* Hide all header, diagnostics, left controls, buttons, carousels, payloads */
-      header,
-      .health-bar,
-      .grid > div:first-child,
-      #diagnostics-card,
-      #card-qr-codes > h2,
-      .tab-row,
-      #view-carousel,
-      .field-group,
-      .btn-row,
-      .btn,
-      .dropzone,
-      .multi-qr-sub {
-        display: none !important;
-      }
-
-      #card-qr-codes {
-        border: none !important;
-        background: transparent !important;
-        padding: 0 !important;
-        margin: 0 !important;
-        box-shadow: none !important;
-      }
-
-      /* Prominent Protocol Title at Top of Print */
-      .print-protocol-title {
-        display: block !important;
+      .print-title {
         font-size: 22pt !important;
         font-weight: 800 !important;
         color: #000 !important;
         text-align: center !important;
-        margin-bottom: 24pt !important;
-        padding-bottom: 10pt !important;
-        border-bottom: 2pt solid #000 !important;
+        margin-bottom: 24px !important;
+        border-bottom: 2px solid #000 !important;
+        padding-bottom: 12px !important;
       }
-
-      /* Force Side-by-Side Multi-QR Grid */
-      #view-grid {
-        display: block !important;
-      }
-
-      .multi-qr-grid {
+      .print-qr-grid {
         display: flex !important;
         flex-wrap: wrap !important;
         justify-content: center !important;
-        gap: 20pt !important;
+        gap: 24px !important;
       }
-
-      .multi-qr-card {
-        background: #fff !important;
-        border: 1pt solid #bbb !important;
-        border-radius: 8pt !important;
-        box-shadow: none !important;
+      .print-qr-item {
+        display: flex !important;
+        flex-direction: column !important;
+        align-items: center !important;
         page-break-inside: avoid !important;
-        padding: 14pt !important;
+        text-align: center !important;
       }
-
-      .multi-qr-card img {
-        width: 220px !important;
-        height: 220px !important;
-        margin: 8pt 0 !important;
-        background: #fff !important;
-        padding: 0 !important;
+      .print-qr-item img {
+        width: 250px !important;
+        height: 250px !important;
+        image-rendering: pixelated !important;
       }
-
-      .multi-qr-label {
+      .print-qr-item span {
+        font-size: 12pt !important;
+        font-weight: 700 !important;
         color: #000 !important;
-        font-size: 13pt !important;
-        font-weight: 800 !important;
+        margin-top: 6px !important;
       }
     }
   </style>
 </head>
 <body>
+  <!-- Clean Print-Only Root Container -->
+  <div id="print-document">
+    <div class="print-title" id="print-protocol-title">Protocol Title</div>
+    <div class="print-qr-grid" id="print-qr-grid"></div>
+  </div>
+
   <div class="container">
     <header>
       <div>
@@ -628,10 +623,51 @@ var QRCode;!function(){function a(a){this.mode=c.MODE_8BIT_BYTE,this.data=a,this
     </div>
 
     <div class="grid">
-      <!-- LEFT COLUMN: CONTROLS & OPTIMIZATION -->
+      <!-- LEFT COLUMN: LIBRARY & CONTROLS -->
       <div>
+        <!-- SHARED LAB LIBRARY & USER FOLDERS -->
         <div class="card">
-          <h2>📁 Load Protocol</h2>
+          <h2>🏛️ Shared Lab Library</h2>
+
+          <div class="folder-status-box">
+            <div class="folder-name-text" id="folder-status-text">
+              📁 Connected: <span style="color: var(--text-muted); font-weight: normal;">No Folder Imported</span>
+            </div>
+            <div style="display: flex; gap: 8px;">
+              <button class="btn btn-sm" id="connect-folder-btn" onclick="importUserProtocolFolder()">📂 Import User Folder</button>
+              <button class="btn btn-secondary btn-sm" id="rescan-folder-btn" style="display: none;" onclick="rescanConnectedFolder()">🔄 Rescan</button>
+            </div>
+          </div>
+
+          <!-- Hidden standard directory picker fallback for browsers lacking File System Access API -->
+          <input
+            type="file"
+            id="webkit-folder-input"
+            webkitdirectory
+            directory
+            multiple
+            style="display: none;"
+            onchange="handleWebkitDirectorySelect(event)"
+          />
+
+          <div class="field-group">
+            <div class="field-label">1. Researcher / User Folder</div>
+            <select id="user-select" onchange="onUserSelectChange()">
+              <option value="">-- Choose or Import Folder --</option>
+            </select>
+          </div>
+
+          <div class="field-group">
+            <div class="field-label">2. Protocol Spreadsheet</div>
+            <select id="protocol-select" onchange="onProtocolSelectChange()" disabled>
+              <option value="">-- Choose User Folder First --</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- LOAD DIRECT WORKBOOK / SAMPLE PROTOCOLS -->
+        <div class="card">
+          <h2>📁 Load Protocol Directly</h2>
           <div class="dropzone" id="dropzone" onclick="document.getElementById('file-input').click()">
             <div class="dropzone-icon">📄</div>
             <p><strong>Click to choose</strong> or drag & drop an Excel file (.xlsx)</p>
@@ -640,7 +676,7 @@ var QRCode;!function(){function a(a){this.mode=c.MODE_8BIT_BYTE,this.data=a,this
           </div>
 
           <div class="btn-row">
-            <button class="btn btn-secondary" onclick="loadSampleProtocol('dilution')">Load Sample: Dilution Protocol + Platemap</button>
+            <button class="btn btn-secondary" onclick="loadSampleProtocol('dilution')">Load Sample: Dilution Protocol</button>
             <button class="btn btn-secondary" onclick="loadSampleProtocol('large')">Load Sample: 20-Step Assay</button>
           </div>
         </div>
@@ -690,13 +726,10 @@ var QRCode;!function(){function a(a){this.mode=c.MODE_8BIT_BYTE,this.data=a,this
         </div>
       </div>
 
-      <!-- RIGHT COLUMN: GENERATED QR CODES (TOP) & DIAGNOSTICS (BOTTOM) -->
+      <!-- RIGHT COLUMN: QR OUTPUT (TOP) & DIAGNOSTICS (BOTTOM) -->
       <div>
-        <!-- 1. GENERATED QR CODES (TOP RIGHT NEXT TO LOAD PROTOCOL) -->
-        <div class="card" id="card-qr-codes">
-          <!-- Print-Only Title Header -->
-          <h1 id="print-protocol-title" class="print-protocol-title">Protocol Title</h1>
-
+        <!-- GENERATED QR CODES (TOP RIGHT) -->
+        <div class="card">
           <h2>🔲 Generated QR Code(s)</h2>
 
           <!-- Tab Bar -->
@@ -740,12 +773,12 @@ var QRCode;!function(){function a(a){this.mode=c.MODE_8BIT_BYTE,this.data=a,this
 
           <div class="btn-row">
             <button class="btn" onclick="downloadActiveQR()">💾 Download Active Frame</button>
-            <button class="btn btn-secondary" onclick="window.print()">🖨️ Print Compliance SOP Sheet</button>
+            <button class="btn btn-secondary" onclick="prepareAndPrint()">🖨️ Print Compliance SOP Sheet</button>
           </div>
         </div>
 
-        <!-- 2. PAYLOAD & CHUNK DIAGNOSTICS (BELOW GENERATED QR CODES) -->
-        <div class="card" id="diagnostics-card">
+        <!-- PAYLOAD & CHUNK DIAGNOSTICS (BELOW QR CODES) -->
+        <div class="card">
           <h2>📊 Payload & Chunk Diagnostics</h2>
 
           <div class="capacity-wrapper">
@@ -794,6 +827,274 @@ var QRCode;!function(){function a(a){this.mode=c.MODE_8BIT_BYTE,this.data=a,this
     let activeCarouselIndex = 0;
     let carouselInterval = null;
     let isCarouselRunning = true;
+
+    // --- User Protocol Folders State ---
+    // userFolders: Map of folderName -> { name: string, handle?: FileSystemDirectoryHandle, files: Array<{ name: string, file?: File, handle?: FileSystemFileHandle }> }
+    let userFolders = {};
+    let savedDirectoryHandle = null;
+
+    const IDB_NAME = 'HoodSideQRLabDB';
+    const IDB_STORE = 'handles';
+
+    // IndexedDB for Directory Handle Persistence
+    function openIDB() {
+      return new Promise((resolve, reject) => {
+        const req = indexedDB.open(IDB_NAME, 1);
+        req.onupgradeneeded = () => req.result.createObjectStore(IDB_STORE);
+        req.onsuccess = () => resolve(req.result);
+        req.onerror = () => reject(req.error);
+      });
+    }
+
+    async function saveDirectoryHandle(handle) {
+      try {
+        const db = await openIDB();
+        const tx = db.transaction(IDB_STORE, 'readwrite');
+        tx.objectStore(IDB_STORE).put(handle, 'userProtocolFolder');
+      } catch (err) {
+        console.warn('Could not persist directory handle:', err);
+      }
+    }
+
+    async function loadDirectoryHandle() {
+      try {
+        const db = await openIDB();
+        return new Promise((resolve) => {
+          const tx = db.transaction(IDB_STORE, 'readonly');
+          const req = tx.objectStore(IDB_STORE).get('userProtocolFolder');
+          req.onsuccess = () => resolve(req.result || null);
+          req.onerror = () => resolve(null);
+        });
+      } catch {
+        return null;
+      }
+    }
+
+    // Import Folder: Uses File System Access API if available, otherwise webkitdirectory fallback
+    async function importUserProtocolFolder() {
+      if (window.showDirectoryPicker) {
+        try {
+          const dirHandle = await window.showDirectoryPicker({ mode: 'read' });
+          savedDirectoryHandle = dirHandle;
+          await saveDirectoryHandle(dirHandle);
+          await scanDirectoryHandle(dirHandle);
+          return;
+        } catch (err) {
+          if (err.name === 'AbortError') return;
+          console.warn('showDirectoryPicker error, trying fallback:', err);
+        }
+      }
+
+      // Fallback for browsers or environments without showDirectoryPicker
+      document.getElementById('webkit-folder-input').click();
+    }
+
+    async function rescanConnectedFolder() {
+      if (savedDirectoryHandle) {
+        try {
+          await scanDirectoryHandle(savedDirectoryHandle);
+        } catch (err) {
+          console.warn('Could not rescan saved handle:', err);
+          alert('Please click "Import User Folder" to reconnect permissions.');
+        }
+      }
+    }
+
+    // Scans a FileSystemDirectoryHandle (supports selecting "Erics Protocols" directly or a parent containing user folders)
+    async function scanDirectoryHandle(dirHandle) {
+      const folderName = dirHandle.name;
+      const directExcelFiles = [];
+      const subFolders = [];
+
+      for await (const entry of dirHandle.values()) {
+        if (entry.kind === 'file') {
+          const lower = entry.name.toLowerCase();
+          if ((lower.endsWith('.xlsx') || lower.endsWith('.xls')) && !entry.name.startsWith('~')) {
+            directExcelFiles.push({
+              name: entry.name,
+              handle: entry
+            });
+          }
+        } else if (entry.kind === 'directory') {
+          subFolders.push(entry);
+        }
+      }
+
+      // If the selected folder contains Excel files directly (e.g. "Erics Protocols")
+      if (directExcelFiles.length > 0) {
+        userFolders[folderName] = {
+          name: folderName,
+          handle: dirHandle,
+          files: directExcelFiles
+        };
+      }
+
+      // If the selected folder contains subfolders (e.g. a parent lab drive with "Erics Protocols", "Sarahs Protocols")
+      for (const subDir of subFolders) {
+        const subFiles = [];
+        for await (const subEntry of subDir.values()) {
+          if (subEntry.kind === 'file') {
+            const lower = subEntry.name.toLowerCase();
+            if ((lower.endsWith('.xlsx') || lower.endsWith('.xls')) && !subEntry.name.startsWith('~')) {
+              subFiles.push({
+                name: subEntry.name,
+                handle: subEntry
+              });
+            }
+          }
+        }
+        if (subFiles.length > 0) {
+          userFolders[subDir.name] = {
+            name: subDir.name,
+            handle: subDir,
+            files: subFiles
+          };
+        }
+      }
+
+      updateFolderUI(folderName);
+    }
+
+    // Fallback: Handles webkitdirectory folder import
+    function handleWebkitDirectorySelect(e) {
+      const files = Array.from(e.target.files || []);
+      if (files.length === 0) return;
+
+      files.forEach((file) => {
+        const pathParts = (file.webkitRelativePath || file.name).split('/');
+        const lower = file.name.toLowerCase();
+        const isExcel = (lower.endsWith('.xlsx') || lower.endsWith('.xls')) && !file.name.startsWith('~');
+
+        if (isExcel) {
+          // If in a folder (e.g. "Erics Protocols/assay.xlsx"), use folder name; else "Imported Protocols"
+          const folderName = pathParts.length > 1 ? pathParts[0] : 'Imported Protocols';
+          if (!userFolders[folderName]) {
+            userFolders[folderName] = {
+              name: folderName,
+              files: []
+            };
+          }
+          userFolders[folderName].files.push({
+            name: file.name,
+            file: file
+          });
+        }
+      });
+
+      const firstFolderName = Object.keys(userFolders)[0] || 'Imported Protocols';
+      updateFolderUI(firstFolderName);
+    }
+
+    function updateFolderUI(activeName) {
+      const folderStatus = document.getElementById('folder-status-text');
+      const rescanBtn = document.getElementById('rescan-folder-btn');
+      folderStatus.innerHTML = `📁 Connected: <strong>${activeName}</strong>`;
+      rescanBtn.style.display = savedDirectoryHandle ? 'inline-flex' : 'none';
+
+      populateUserDropdown();
+      if (userFolders[activeName]) {
+        document.getElementById('user-select').value = activeName;
+        populateProtocolDropdown(activeName);
+      }
+    }
+
+    function populateUserDropdown() {
+      const userSelect = document.getElementById('user-select');
+      const prevVal = userSelect.value;
+      userSelect.innerHTML = '<option value="">-- Choose User Folder --</option>';
+
+      const folderNames = Object.keys(userFolders).sort();
+      folderNames.forEach((fName) => {
+        const opt = document.createElement('option');
+        opt.value = fName;
+        opt.textContent = `${fName} (${userFolders[fName].files.length} protocols)`;
+        userSelect.appendChild(opt);
+      });
+
+      if (folderNames.includes(prevVal)) {
+        userSelect.value = prevVal;
+        populateProtocolDropdown(prevVal);
+      } else if (folderNames.length === 1) {
+        userSelect.value = folderNames[0];
+        populateProtocolDropdown(folderNames[0]);
+      } else {
+        document.getElementById('protocol-select').innerHTML = '<option value="">-- Choose User Folder First --</option>';
+        document.getElementById('protocol-select').disabled = true;
+      }
+    }
+
+    function onUserSelectChange() {
+      const folderName = document.getElementById('user-select').value;
+      populateProtocolDropdown(folderName);
+    }
+
+    function populateProtocolDropdown(folderName) {
+      const protoSelect = document.getElementById('protocol-select');
+      protoSelect.innerHTML = '';
+
+      if (!folderName || !userFolders[folderName]) {
+        protoSelect.innerHTML = '<option value="">-- Choose User Folder First --</option>';
+        protoSelect.disabled = true;
+        return;
+      }
+
+      protoSelect.disabled = false;
+      const defaultOpt = document.createElement('option');
+      defaultOpt.value = '';
+      defaultOpt.textContent = `-- Select Protocol in "${folderName}" --`;
+      protoSelect.appendChild(defaultOpt);
+
+      userFolders[folderName].files.forEach((f, idx) => {
+        const opt = document.createElement('option');
+        opt.value = String(idx);
+        opt.textContent = f.name.replace(/\.[^/.]+$/, '');
+        protoSelect.appendChild(opt);
+      });
+    }
+
+    async function onProtocolSelectChange() {
+      const folderName = document.getElementById('user-select').value;
+      const protoIdx = document.getElementById('protocol-select').value;
+      if (!folderName || protoIdx === '' || !userFolders[folderName]) return;
+
+      const fileItem = userFolders[folderName].files[parseInt(protoIdx, 10)];
+      if (!fileItem) return;
+
+      try {
+        let fileObj = fileItem.file;
+        if (!fileObj && fileItem.handle) {
+          fileObj = await fileItem.handle.getFile();
+        }
+        if (fileObj) {
+          await parseUploadedExcel(fileObj);
+        }
+      } catch (err) {
+        alert(`Failed to open protocol "${fileItem.name}": ` + err.message);
+      }
+    }
+
+    // --- Printing Preparation: Protocol Title and QR Codes Only ---
+    function prepareAndPrint() {
+      const printTitle = document.getElementById('print-protocol-title');
+      const printGrid = document.getElementById('print-qr-grid');
+
+      printTitle.textContent = currentProtocol ? currentProtocol.title : 'Standard Laboratory Protocol';
+      printGrid.innerHTML = '';
+
+      if (generatedChunks && generatedChunks.length > 0) {
+        generatedChunks.forEach((chk) => {
+          const item = document.createElement('div');
+          item.className = 'print-qr-item';
+          item.innerHTML = `
+            <img src="${chk.dataUrl}" alt="Part ${chk.index}" />
+            <span>${chk.total === 1 ? 'Scan to Load Protocol' : `Part ${chk.index} of ${chk.total}`}</span>
+          `;
+          printGrid.appendChild(item);
+        });
+      }
+
+      window.print();
+    }
 
     function onChunkSizeChange() {
       const sel = document.getElementById('chunk-size-select').value;
@@ -1139,12 +1440,6 @@ var QRCode;!function(){function a(a){this.mode=c.MODE_8BIT_BYTE,this.data=a,this
       const ecc = document.getElementById('ecc-level').value;
       const maxChunkBytes = getSelectedChunkSize();
 
-      // Update Print Title
-      const printTitle = document.getElementById('print-protocol-title');
-      if (printTitle) {
-        printTitle.textContent = currentProtocol.title;
-      }
-
       document.getElementById('protocol-preview').innerHTML = `
         <div class="preview-item"><strong>Title:</strong> ${currentProtocol.title}</div>
         <div class="preview-item"><strong>Variables (${currentProtocol.variables.length}):</strong> ${currentProtocol.variables.map(v => v.key).join(', ') || 'None'}</div>
@@ -1187,7 +1482,6 @@ var QRCode;!function(){function a(a){this.mode=c.MODE_8BIT_BYTE,this.data=a,this
           dataUrl: '',
         });
       } else {
-        // Multi-chunk splitting
         const headerReserve = 18; // approx header: LPC:XXXX:99/99:
         const sliceSize = maxChunkBytes - headerReserve;
         const totalParts = Math.ceil(fullPayload.length / sliceSize);
@@ -1238,7 +1532,7 @@ var QRCode;!function(){function a(a){this.mode=c.MODE_8BIT_BYTE,this.data=a,this
             const card = document.createElement('div');
             card.className = 'multi-qr-card';
             card.innerHTML = `
-              <div class="multi-qr-label">${chk.total > 1 ? `Part ${chk.index} of ${chk.total}` : ''}</div>
+              <div class="multi-qr-label">Part ${chk.index} of ${chk.total}</div>
               <img src="${url}" alt="Part ${chk.index}" />
               <div class="multi-qr-sub">${chk.payload.length} bytes</div>
             `;
@@ -1447,8 +1741,20 @@ var QRCode;!function(){function a(a){this.mode=c.MODE_8BIT_BYTE,this.data=a,this
       if (e.target.files.length > 0) parseUploadedExcel(e.target.files[0]);
     }
 
-    window.addEventListener('load', () => {
+    window.addEventListener('load', async () => {
       updateHealthBadges();
+
+      // Attempt to restore saved folder handle
+      try {
+        const savedHandle = await loadDirectoryHandle();
+        if (savedHandle) {
+          savedDirectoryHandle = savedHandle;
+          await scanDirectoryHandle(savedHandle);
+        }
+      } catch (err) {
+        console.log('Permission re-grant may be needed on folder click.');
+      }
+
       loadSampleProtocol('dilution');
     });
   </script>
